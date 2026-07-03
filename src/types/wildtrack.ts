@@ -29,6 +29,12 @@ export interface Sector {
   /** Color HEX para identificar el sector en la UI. */
   color: string;
   description?: string;
+  municipio?: string;
+  ciudad?: string;
+  pais?: string;
+  /** Coordenadas del centroide de la zona (EPSG:4326). */
+  lat?: number;
+  lng?: number;
 }
 
 /** Una estación de alimentación. Coordenadas administradas (no GPS del equipo). */
@@ -43,6 +49,10 @@ export interface Station {
   status: "online" | "alert" | "offline";
   /** Sector al que pertenece la estación. */
   sector_id: string;
+  /** Tipo de alimento que se suministra en este comedero. */
+  food_type?: string;
+  /** Código o MAC del dispositivo ESP32 enlazado. */
+  device_id?: string;
 }
 
 /** Animal registrado en una estación con chip RFID. */

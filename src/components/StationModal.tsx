@@ -1,6 +1,16 @@
 import { useState } from "react";
 import type { Sector, Station } from "../types/wildtrack";
 
+const FOOD_TYPES = [
+  "Frutas",
+  "Semillas",
+  "Insectos",
+  "Néctar",
+  "Hojarasca",
+  "Mezcla omnívora",
+  "Otro",
+];
+
 interface Props {
   sector: Sector;
   onClose: () => void;
@@ -12,6 +22,7 @@ export default function StationModal({ sector, onClose, onCreate }: Props) {
   const [lat, setLat] = useState("");
   const [lng, setLng] = useState("");
   const [status, setStatus] = useState<Station["status"]>("online");
+  const [foodType, setFoodType] = useState("");
   const [errors, setErrors] = useState<Record<string, string>>({});
 
   function validate() {
@@ -34,32 +45,40 @@ export default function StationModal({ sector, onClose, onCreate }: Props) {
       lng: parseFloat(lng),
       status,
       sector_id: sector.sector_id,
+      food_type: foodType || undefined,
     });
     onClose();
   }
 
   return (
-    <div className="modal-overlay" role="dialog" aria-modal="true" aria-label="Nueva estación">
+    <div
+      className="modal-overlay"
+      role="dialog"
+      aria-modal="true"
+      aria-label="Nuevo comedero"
+      onClick={(e) => { if (e.target === e.currentTarget) onClose(); }}
+    >
       <div className="modal">
         <div className="modal-head">
-          <h3 className="modal-title">Nueva estación</h3>
+          <h3 className="modal-title">Nuevo comedero</h3>
           <button className="modal-close" onClick={onClose} aria-label="Cerrar">×</button>
         </div>
         <div className="modal-sector-badge" style={{ borderColor: sector.color, color: sector.color }}>
-          Sector: {sector.name}
+          Zona: {sector.name}
         </div>
         <form onSubmit={handleSubmit} className="modal-form">
           <div className="form-field">
-            <label className="form-label">Nombre de la estación *</label>
+            <label className="form-label">Nombre del comedero *</label>
             <input
               className="form-input"
               value={name}
               onChange={(e) => { setName(e.target.value); setErrors((p) => ({ ...p, name: "" })); }}
-              placeholder="Ej. Cerro La Cruz — Sector Norte"
+              placeholder="Ej. Cerezo Sector Norte"
               autoFocus
             />
             {errors.name && <p className="form-error">{errors.name}</p>}
           </div>
+
           <div className="form-row">
             <div className="form-field">
               <label className="form-label">Latitud *</label>
@@ -86,6 +105,21 @@ export default function StationModal({ sector, onClose, onCreate }: Props) {
               {errors.lng && <p className="form-error">{errors.lng}</p>}
             </div>
           </div>
+
+          <div className="form-field">
+            <label className="form-label">Tipo de alimento</label>
+            <select
+              className="form-select"
+              value={foodType}
+              onChange={(e) => setFoodType(e.target.value)}
+            >
+              <option value="">— Sin asignar —</option>
+              {FOOD_TYPES.map((f) => (
+                <option key={f} value={f}>{f}</option>
+              ))}
+            </select>
+          </div>
+
           <div className="form-field">
             <label className="form-label">Estado inicial</label>
             <select
@@ -98,9 +132,10 @@ export default function StationModal({ sector, onClose, onCreate }: Props) {
               <option value="offline">Sin reportar</option>
             </select>
           </div>
+
           <div className="modal-actions">
             <button type="button" className="btn-cancel" onClick={onClose}>Cancelar</button>
-            <button type="submit" className="btn-submit">Crear estación</button>
+            <button type="submit" className="btn-submit">Crear comedero</button>
           </div>
         </form>
       </div>

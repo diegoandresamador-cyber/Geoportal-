@@ -10,6 +10,7 @@ interface Props {
   onAddIndividual: () => void;
   onViewIndividual: (ind: Individual) => void;
   onDownloadStation: () => void;
+  onLinkDevice: () => void;
 }
 
 const DIAS = ["L", "M", "X", "J", "V", "S", "D"];
@@ -20,7 +21,7 @@ const SEX_LABEL: Record<Individual["sex"], string> = {
   desconocido: "? Desc.",
 };
 
-export default function DetailPanel({ station, stats, individuals, onClose, onAddIndividual, onViewIndividual, onDownloadStation }: Props) {
+export default function DetailPanel({ station, stats, individuals, onClose, onAddIndividual, onViewIndividual, onDownloadStation, onLinkDevice }: Props) {
   const open = !!station && !!stats;
   const peak = stats ? Math.max(...stats.visitasPorDia) : 0;
   const lastIdentified = stats ? stats.identificados > 0 : false;
@@ -53,6 +54,33 @@ export default function DetailPanel({ station, stats, individuals, onClose, onAd
           </div>
 
           <div className="detail-body">
+
+            {/* ── Dispositivo ESP32 ── */}
+            <div className="detail-device">
+              <div className="detail-device-info">
+                <span className="detail-device-dot" data-linked={String(!!station.device_id)} />
+                <div>
+                  <div className="detail-device-label">
+                    {station.device_id ? "Dispositivo enlazado" : "Sin dispositivo enlazado"}
+                  </div>
+                  {station.device_id && (
+                    <div className="detail-device-code">{station.device_id}</div>
+                  )}
+                </div>
+              </div>
+              <button className="btn-link-device" onClick={onLinkDevice}>
+                {station.device_id ? "Reconfigurar" : "Enlazar ESP32"}
+              </button>
+            </div>
+
+            {/* ── Tipo de alimento ── */}
+            {station.food_type && (
+              <div className="detail-food">
+                <span>🌿</span>
+                <span>Alimento: <strong>{station.food_type}</strong></span>
+              </div>
+            )}
+
             <div className="photo">
               <span className="ph-tag" data-id={lastIdentified}>
                 {lastIdentified ? "último: identificado" : "último: no identificado"}

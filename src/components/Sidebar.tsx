@@ -1,5 +1,6 @@
 import { useState } from "react";
 import type { Sector, Station, StationStats } from "../types/wildtrack";
+import type { User } from "../lib/auth";
 
 export type FilterMode = "todas" | "alerta" | "noid";
 
@@ -17,6 +18,8 @@ interface Props {
   onAddSector: () => void;
   onAddStation: (sectorId: string) => void;
   onOpenExport: () => void;
+  onLogout: () => void;
+  currentUser: User;
   isFiltered: boolean;
 }
 
@@ -33,7 +36,7 @@ function ChevronIcon({ collapsed }: { collapsed: boolean }) {
 
 export default function Sidebar({
   sectors, stations, statsById, totals, query, setQuery, filter, setFilter,
-  selectedId, onSelect, onAddSector, onAddStation, onOpenExport, isFiltered,
+  selectedId, onSelect, onAddSector, onAddStation, onOpenExport, onLogout, currentUser, isFiltered,
 }: Props) {
   // All sectors start expanded; toggling adds/removes the sector_id from this set
   const [collapsed, setCollapsed] = useState<Set<string>>(new Set());
@@ -62,6 +65,11 @@ export default function Sidebar({
       <div className="brand">
         <h1><span className="dot" /> WildTrack</h1>
         <p>Geoportal de monitoreo de fauna · Valle de Aburrá</p>
+      </div>
+
+      <div className="sidebar-user">
+        <span className="sidebar-user-name">👤 {currentUser.name}</span>
+        <button className="btn-logout" onClick={onLogout}>Salir</button>
       </div>
 
       <div className="kpis">

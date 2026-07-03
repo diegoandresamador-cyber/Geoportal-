@@ -1,6 +1,8 @@
 import { useEffect, useMemo, useState, useCallback } from "react";
 import type { Sector, Station, Individual, StationStats, WildEvent } from "./types/wildtrack";
 import { fetchSectors, fetchStations, fetchEvents, fetchIndividuals, computeStats } from "./lib/api";
+import { getSession, logout } from "./lib/auth";
+import type { User } from "./lib/auth";
 import Sidebar, { type FilterMode } from "./components/Sidebar";
 import MapView from "./components/MapView";
 import DetailPanel from "./components/DetailPanel";
@@ -10,9 +12,13 @@ import IndividualModal from "./components/IndividualModal";
 import IndividualDetailModal from "./components/IndividualDetailModal";
 import AnimalFeedingDashboard from "./components/AnimalFeedingDashboard";
 import ExportModal from "./components/ExportModal";
+import DeviceLinkModal from "./components/DeviceLinkModal";
+import LoginPage from "./components/LoginPage";
 import { exportEventsCsv } from "./lib/exportData";
 
 export default function App() {
+  const [currentUser, setCurrentUser] = useState<User | null>(() => getSession());
+
   const [sectors, setSectors] = useState<Sector[]>([]);
   const [stations, setStations] = useState<Station[]>([]);
   const [events, setEvents] = useState<WildEvent[]>([]);
@@ -28,6 +34,7 @@ export default function App() {
   const [viewingIndividual, setViewingIndividual] = useState<Individual | null>(null);
   const [viewingHistory, setViewingHistory] = useState<Individual | null>(null);
   const [exportModalOpen, setExportModalOpen] = useState(false);
+  const [deviceLinkStationId, setDeviceLinkStationId] = useState<string | null>(null);
 
   useEffect(() => {
     let alive = true;
@@ -76,10 +83,14 @@ export default function App() {
   const selectedIndividuals = selectedId
     ? individuals.filter((i) => i.station_id === selectedId)
     : [];
+  const deviceLinkStation = deviceLinkStationId
+    ? stations.find((s) => s.station_id === deviceLinkStationId) ?? null
+    : null;
 
   useEffect(() => {
     const h = (e: KeyboardEvent) => {
       if (e.key === "Escape") {
+        if (deviceLinkStationId) { setDeviceLinkStationId(null); return; }
         if (exportModalOpen) { setExportModalOpen(false); return; }
         if (viewingHistory) { setViewingHistory(null); return; }
         if (viewingIndividual) { setViewingIndividual(null); return; }
@@ -91,9 +102,9 @@ export default function App() {
     };
     window.addEventListener("keydown", h);
     return () => window.removeEventListener("keydown", h);
-  }, [exportModalOpen, viewingHistory, viewingIndividual, sectorModalOpen, stationModalSectorId, individualModalStationId]);
+  }, [deviceLinkStationId, exportModalOpen, viewingHistory, viewingIndividual, sectorModalOpen, stationModalSectorId, individualModalStationId]);
 
-  // --- Creación de entidades ---
+  // --- Creación / actualización de entidades ---
 
   function handleCreateSector(data: Omit<Sector, "sector_id">) {
     const sector_id = `SEC-${String(sectors.length + 1).padStart(2, "0")}`;
@@ -111,9 +122,25 @@ export default function App() {
     setIndividuals((prev) => [...prev, { ...data, individual_id }]);
   }
 
+  function handleLinkDevice(stationId: string, deviceId: string) {
+    setStations((prev) =>
+      prev.map((st) => st.station_id === stationId ? { ...st, device_id: deviceId } : st)
+    );
+  }
+
+  function handleLogout() {
+    logout();
+    setCurrentUser(null);
+  }
+
   const stationModalSector = stationModalSectorId
     ? sectors.find((s) => s.sector_id === stationModalSectorId) ?? null
     : null;
+
+  // ── Pantalla de login ──────────────────────────────────────────────────────
+  if (!currentUser) {
+    return <LoginPage onAuth={(user) => setCurrentUser(user)} />;
+  }
 
   return (
     <div className="app">
@@ -131,6 +158,8 @@ export default function App() {
         onAddSector={() => setSectorModalOpen(true)}
         onAddStation={(sectorId) => setStationModalSectorId(sectorId)}
         onOpenExport={() => setExportModalOpen(true)}
+        onLogout={handleLogout}
+        currentUser={currentUser}
         isFiltered={isFiltered}
       />
       <MapView
@@ -147,6 +176,7 @@ export default function App() {
         onClose={() => setSelectedId(null)}
         onAddIndividual={() => setIndividualModalStationId(selectedId)}
         onViewIndividual={(ind) => setViewingIndividual(ind)}
+        onLinkDevice={() => selectedId && setDeviceLinkStationId(selectedId)}
         onDownloadStation={() => {
           if (!selectedId) return;
           const stEvts = events.filter((e) => e.station_id === selectedId);
@@ -197,6 +227,14 @@ export default function App() {
           sectors={sectors}
           statsById={statsById}
           onClose={() => setExportModalOpen(false)}
+        />
+      )}
+
+      {deviceLinkStation && (
+        <DeviceLinkModal
+          station={deviceLinkStation}
+          onClose={() => setDeviceLinkStationId(null)}
+          onLink={handleLinkDevice}
         />
       )}
 
