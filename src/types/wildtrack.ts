@@ -4,7 +4,7 @@
 
 /** Un evento registrado por una estación. Refleja el payload MQTT del firmware. */
 export interface WildEvent {
-  /** Catálogo de 22 estaciones. */
+  /** ID de una de las estaciones del catálogo (ver src/data/stations.ts). */
   station_id: string;
   /** 15 dígitos ISO 11784. null => "individuo no identificado" (el evento se guarda igual). */
   rfid_tag: string | null;
@@ -53,6 +53,8 @@ export interface Station {
   food_type?: string;
   /** Código o MAC del dispositivo ESP32 enlazado. */
   device_id?: string;
+  /** Estación real usada en la demo de clase (envía datos reales); el resto son simulación. */
+  is_live?: boolean;
 }
 
 /** Animal registrado en una estación con chip RFID. */

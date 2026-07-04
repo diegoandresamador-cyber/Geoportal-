@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useState, useCallback } from "react";
 import type { Sector, Station, Individual, StationStats, WildEvent } from "./types/wildtrack";
 import { fetchSectors, fetchStations, fetchEvents, fetchIndividuals, computeStats } from "./lib/api";
-import { getSession, logout } from "./lib/auth";
+import { restoreSession, logout, UnauthorizedError } from "./lib/auth";
 import type { User } from "./lib/auth";
 import Sidebar, { type FilterMode } from "./components/Sidebar";
 import MapView from "./components/MapView";
@@ -12,12 +12,13 @@ import IndividualModal from "./components/IndividualModal";
 import IndividualDetailModal from "./components/IndividualDetailModal";
 import AnimalFeedingDashboard from "./components/AnimalFeedingDashboard";
 import ExportModal from "./components/ExportModal";
+import StationVisitsModal from "./components/StationVisitsModal";
 import DeviceLinkModal from "./components/DeviceLinkModal";
 import LoginPage from "./components/LoginPage";
 import { exportEventsCsv } from "./lib/exportData";
 
 export default function App() {
-  const [currentUser, setCurrentUser] = useState<User | null>(() => getSession());
+  const [currentUser, setCurrentUser] = useState<User | null>(() => restoreSession());
 
   const [sectors, setSectors] = useState<Sector[]>([]);
   const [stations, setStations] = useState<Station[]>([]);
@@ -35,20 +36,27 @@ export default function App() {
   const [viewingHistory, setViewingHistory] = useState<Individual | null>(null);
   const [exportModalOpen, setExportModalOpen] = useState(false);
   const [deviceLinkStationId, setDeviceLinkStationId] = useState<string | null>(null);
+  const [visitsModalOpen, setVisitsModalOpen] = useState(false);
 
   useEffect(() => {
+    if (!currentUser) return;
     let alive = true;
-    Promise.all([fetchSectors(), fetchStations(), fetchEvents(), fetchIndividuals()]).then(
-      ([sec, st, ev, ind]) => {
+    Promise.all([fetchSectors(), fetchStations(), fetchEvents(), fetchIndividuals()])
+      .then(([sec, st, ev, ind]) => {
         if (!alive) return;
         setSectors(sec);
         setStations(st);
         setEvents(ev);
         setIndividuals(ind);
-      }
-    );
+      })
+      .catch((err: unknown) => {
+        if (!alive) return;
+        // Token ausente/expirado a mitad de sesión: vuelve a mostrar el login.
+        if (err instanceof UnauthorizedError) { setCurrentUser(null); return; }
+        console.error("Error cargando datos de WildTrack:", err);
+      });
     return () => { alive = false; };
-  }, []);
+  }, [currentUser]);
 
   const statsById = useMemo(() => {
     const m = new Map<string, StationStats>();
@@ -91,6 +99,7 @@ export default function App() {
     const h = (e: KeyboardEvent) => {
       if (e.key === "Escape") {
         if (deviceLinkStationId) { setDeviceLinkStationId(null); return; }
+        if (visitsModalOpen) { setVisitsModalOpen(false); return; }
         if (exportModalOpen) { setExportModalOpen(false); return; }
         if (viewingHistory) { setViewingHistory(null); return; }
         if (viewingIndividual) { setViewingIndividual(null); return; }
@@ -102,7 +111,7 @@ export default function App() {
     };
     window.addEventListener("keydown", h);
     return () => window.removeEventListener("keydown", h);
-  }, [deviceLinkStationId, exportModalOpen, viewingHistory, viewingIndividual, sectorModalOpen, stationModalSectorId, individualModalStationId]);
+  }, [deviceLinkStationId, visitsModalOpen, exportModalOpen, viewingHistory, viewingIndividual, sectorModalOpen, stationModalSectorId, individualModalStationId]);
 
   // --- Creación / actualización de entidades ---
 
@@ -173,10 +182,11 @@ export default function App() {
         station={selectedStation}
         stats={selectedStats}
         individuals={selectedIndividuals}
-        onClose={() => setSelectedId(null)}
+        onClose={() => { setSelectedId(null); setVisitsModalOpen(false); }}
         onAddIndividual={() => setIndividualModalStationId(selectedId)}
         onViewIndividual={(ind) => setViewingIndividual(ind)}
         onLinkDevice={() => selectedId && setDeviceLinkStationId(selectedId)}
+        onViewVisits={() => setVisitsModalOpen(true)}
         onDownloadStation={() => {
           if (!selectedId) return;
           const stEvts = events.filter((e) => e.station_id === selectedId);
@@ -227,6 +237,16 @@ export default function App() {
           sectors={sectors}
           statsById={statsById}
           onClose={() => setExportModalOpen(false)}
+        />
+      )}
+
+      {visitsModalOpen && selectedStation && (
+        <StationVisitsModal
+          station={selectedStation}
+          events={events.filter((e) => e.station_id === selectedStation.station_id)}
+          individuals={individuals}
+          stations={stations}
+          onClose={() => setVisitsModalOpen(false)}
         />
       )}
 

@@ -178,7 +178,10 @@ export default function Sidebar({
                         <span className="st-status" data-s={st.status} />
                         <span className="st-main">
                           <span className="st-name">{st.name.replace(/^Estación \d+ — /, "")}</span>
-                          <span className="st-sub">{st.station_id} · {s?.noIdentificados ?? 0} sin ID</span>
+                          <span className="st-sub">
+                            {st.station_id} · {s?.noIdentificados ?? 0} sin ID
+                            {st.is_live && <span className="live-badge" title="Estación en vivo (real, para la demo)">📡 EN VIVO</span>}
+                          </span>
                         </span>
                         <span className="st-count">{s?.visitas ?? 0}</span>
                       </button>

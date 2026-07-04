@@ -11,6 +11,7 @@ interface Props {
   onViewIndividual: (ind: Individual) => void;
   onDownloadStation: () => void;
   onLinkDevice: () => void;
+  onViewVisits: () => void;
 }
 
 const DIAS = ["L", "M", "X", "J", "V", "S", "D"];
@@ -21,7 +22,7 @@ const SEX_LABEL: Record<Individual["sex"], string> = {
   desconocido: "? Desc.",
 };
 
-export default function DetailPanel({ station, stats, individuals, onClose, onAddIndividual, onViewIndividual, onDownloadStation, onLinkDevice }: Props) {
+export default function DetailPanel({ station, stats, individuals, onClose, onAddIndividual, onViewIndividual, onDownloadStation, onLinkDevice, onViewVisits }: Props) {
   const open = !!station && !!stats;
   const peak = stats ? Math.max(...stats.visitasPorDia) : 0;
   const lastIdentified = stats ? stats.identificados > 0 : false;
@@ -45,7 +46,10 @@ export default function DetailPanel({ station, stats, individuals, onClose, onAd
               </button>
               <button className="close" onClick={onClose} aria-label="Cerrar panel">×</button>
             </div>
-            <div className="eyebrow">{station.station_id}</div>
+            <div className="eyebrow">
+              {station.station_id}
+              {station.is_live && <span className="live-badge" title="Estación en vivo (real, para la demo)">📡 EN VIVO</span>}
+            </div>
             <h2>{station.name.replace(/^Estación \d+ — /, "")}</h2>
             <div className="meta">
               Última visita {timeAgo(stats.ultimaVisita)} · estado{" "}
@@ -94,7 +98,13 @@ export default function DetailPanel({ station, stats, individuals, onClose, onAd
             </div>
 
             <div className="stats-grid">
-              <div className="stat"><div className="v">{stats.visitas}</div><div className="k">Visitas</div></div>
+              <button
+                className="stat stat-clickable"
+                onClick={onViewVisits}
+                title="Ver detalle de cada visita: foto, identificación, temperatura y humedad"
+              >
+                <div className="v">{stats.visitas}</div><div className="k">Visitas</div>
+              </button>
               <div className="stat"><div className="v">{stats.pesoPromedio} g</div><div className="k">Peso prom.</div></div>
               <div className="stat"><div className="v">{stats.pesoMediana} g</div><div className="k">Mediana</div></div>
             </div>

@@ -10,7 +10,7 @@ interface Props {
   sectors: Sector[];
 }
 
-const COLORS = { forest: "#2d6a4f", green: "#52b788", amber: "#e08a1e", muted: "#5f7669" };
+const COLORS = { forest: "#2d6a4f", green: "#52b788", amber: "#e08a1e", muted: "#5f7669", live: "#3b82f6" };
 
 type LayerKey = "dark" | "osm" | "terrain" | "satellite";
 
@@ -41,18 +41,24 @@ const BASE_LAYERS: Record<LayerKey, { label: string; url: string; attribution: s
   },
 };
 
-function buildIcon(stats: StationStats | undefined, status: Station["status"], active: boolean): L.DivIcon {
+function buildIcon(stats: StationStats | undefined, status: Station["status"], active: boolean, isLive: boolean): L.DivIcon {
   const visitas = stats?.visitas ?? 0;
   const r = Math.max(11, Math.min(26, 11 + visitas * 0.55));
-  const size = (r + 6) * 2;
+  // Espacio extra para el anillo de pulso de la estación en vivo.
+  const size = (r + (isLive ? 10 : 6)) * 2;
   const c = size / 2;
   const noIdFrac = stats && stats.visitas ? stats.noIdentificados / stats.visitas : 0;
 
-  const baseColor = status === "offline" ? COLORS.muted : COLORS.forest;
+  const baseColor = status === "offline" ? COLORS.muted : isLive ? COLORS.live : COLORS.forest;
   const circumference = 2 * Math.PI * r;
   const amberArc = circumference * noIdFrac;
 
+  const pulse = isLive
+    ? `<circle cx="${c}" cy="${c}" r="${r + 3}" fill="none" stroke="${COLORS.live}" stroke-width="2" class="wt-live-pulse"/>`
+    : "";
+
   const ring = `
+    ${pulse}
     <circle cx="${c}" cy="${c}" r="${r}" fill="${baseColor}" fill-opacity="0.85"
       stroke="${active ? "#fff" : "#16241d"}" stroke-width="${active ? 3 : 2}"/>
     <circle cx="${c}" cy="${c}" r="${r}" fill="none" stroke="${COLORS.amber}" stroke-width="4"
@@ -88,6 +94,7 @@ function buildPopupHTML(
         <span class="wt-popup-status" style="color:${statusColor[station.status]}">● ${statusLabel[station.status]}</span>
       </div>
       <div class="wt-popup-name">${station.name}</div>
+      ${station.is_live ? `<div class="wt-popup-live">📡 EN VIVO — estación real de la demo</div>` : ""}
       <div class="wt-popup-sector" style="border-color:${sectorColor};color:${sectorColor}">${sectorName}</div>
       <div class="wt-popup-stats">
         <div class="wt-popup-stat"><span class="wt-popup-stat-v">${visitas}</span><span class="wt-popup-stat-k">Visitas</span></div>
@@ -165,7 +172,7 @@ export default function MapView({ stations, statsById, selectedId, onSelect, sec
 
     stations.forEach((st) => {
       const stats = statsById.get(st.station_id);
-      const icon = buildIcon(stats, st.status, st.station_id === selectedId);
+      const icon = buildIcon(stats, st.status, st.station_id === selectedId, !!st.is_live);
       const marker = L.marker([st.lat, st.lng], { icon, title: st.name }).addTo(map);
 
       const sector = sectors.find((s) => s.sector_id === st.sector_id);
@@ -215,6 +222,7 @@ export default function MapView({ stations, statsById, selectedId, onSelect, sec
         <div className="row"><span className="swatch" style={{ background: COLORS.forest }} /> Tamaño = nº de visitas</div>
         <div className="row"><span className="swatch" style={{ background: COLORS.amber }} /> Arco = % sin identificar</div>
         <div className="row"><span className="swatch" style={{ background: COLORS.muted }} /> Gris = estación offline</div>
+        <div className="row"><span className="swatch" style={{ background: COLORS.live }} /> Azul pulsante 📡 = estación en vivo (real, para la demo)</div>
         <p className="note">Coordenadas administradas por estación (no GPS del equipo).</p>
       </div>
     </div>

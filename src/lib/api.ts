@@ -1,39 +1,67 @@
 import type { Sector, Station, Individual, StationStats, WildEvent } from "../types/wildtrack";
 import { SECTORS, STATIONS, INDIVIDUALS, getMockEvents } from "../data/stations";
+import { authFetch, extractErrorMessage } from "./auth";
+import { USE_MOCK } from "./config";
+import {
+  animalToIndividual, stationToStation, zoneToSector,
+  type AlertReadDto, type AnimalReadDto, type PaginatedDto, type StationReadDto, type ZoneReadDto,
+} from "./adapters";
 
 // ============================================================================
 // CAPA DE ACCESO A DATOS
-// Hoy devuelve datos mock. Aquí es donde se conecta el backend FastAPI real.
+// USE_MOCK (src/lib/config.ts) = false conecta al backend real (ver
+// src/lib/adapters.ts para el mapeo de modelos). fetchEvents() se queda en
+// mock siempre, independientemente del flag: no existe ningún endpoint REST
+// de eventos en el backend — ver nota en esa función.
 // ============================================================================
 
-const USE_MOCK = true; // <-- pon en false cuando exista el backend
+async function getJson<T>(path: string): Promise<T> {
+  const res = await authFetch(path);
+  if (!res.ok) throw new Error(await extractErrorMessage(res));
+  return res.json();
+}
 
 export async function fetchSectors(): Promise<Sector[]> {
   if (USE_MOCK) return SECTORS;
-  // const res = await fetch("/api/sectors");
-  // return res.json();
-  return SECTORS;
+  const data = await getJson<PaginatedDto<ZoneReadDto>>("/api/v1/zones?page_size=100");
+  return data.items.map(zoneToSector);
 }
 
 export async function fetchStations(): Promise<Station[]> {
   if (USE_MOCK) return STATIONS;
-  // const res = await fetch("/api/stations");
-  // return res.json();
-  return STATIONS;
+
+  const [stationsPage, alertsPage] = await Promise.all([
+    getJson<PaginatedDto<StationReadDto>>("/api/v1/stations?page_size=100"),
+    getJson<PaginatedDto<AlertReadDto>>("/api/v1/alerts?resolved=false&page_size=100"),
+  ]);
+
+  const unresolvedAlertStationIds = new Set(
+    alertsPage.items.map((a) => a.station_id).filter((id): id is string => id !== null)
+  );
+
+  return stationsPage.items.map((st) => stationToStation(st, unresolvedAlertStationIds));
 }
 
 export async function fetchEvents(): Promise<WildEvent[]> {
-  if (USE_MOCK) return getMockEvents();
-  // const res = await fetch("/api/events");
-  // return res.json();
+  // No existe ningún router para iot_events en el backend (modules/iot_events
+  // solo tiene schemas.py/service.py/processor.py — es el consumidor MQTT que
+  // escribe a MongoDB, ver app/lifespan.py). app/main.py no registra un
+  // router de eventos: no hay GET /api/v1/events ni equivalente. No se
+  // inventa el endpoint; se mantiene siempre en datos de ejemplo hasta que
+  // el backend exponga una lectura real.
   return getMockEvents();
 }
 
 export async function fetchIndividuals(): Promise<Individual[]> {
   if (USE_MOCK) return INDIVIDUALS;
-  // const res = await fetch("/api/individuals");
-  // return res.json();
-  return INDIVIDUALS;
+
+  const data = await getJson<PaginatedDto<AnimalReadDto>>("/api/v1/animals?page_size=100");
+  // "Individual" en el geoportal = animal con chip. Los animales sin
+  // rfid_tag (is_identified=false) no tienen ficha propia, quedan
+  // representados solo como eventos anónimos (cuando existan).
+  return data.items
+    .filter((a) => a.rfid_tag !== null)
+    .map(animalToIndividual);
 }
 
 // --------- Estadística descriptiva (media, mediana, moda, frecuencia) --------

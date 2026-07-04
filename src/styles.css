@@ -103,6 +103,13 @@ button { font-family: inherit; cursor: pointer; border: none; background: none; 
 .st-sub { font-size: 11px; color: var(--muted); margin-top: 2px; font-family: var(--font-mono); }
 .st-count { font-family: var(--font-display); font-size: 15px; font-weight: 600; color: var(--moss); }
 
+.live-badge {
+  display: inline-flex; align-items: center; gap: 3px; margin-left: 7px;
+  font-family: var(--font-display); font-size: 9.5px; font-weight: 700;
+  color: #93c5fd; background: rgba(59,130,246,0.16); border: 1px solid #3b82f6;
+  padding: 1px 6px; border-radius: 5px; letter-spacing: 0.3px; vertical-align: middle;
+}
+
 /* ---------- Map ---------- */
 .map-wrap { position: relative; }
 .leaflet-container { width: 100%; height: 100%; background: #0b130f; font-family: var(--font-body); }
@@ -187,6 +194,23 @@ button { font-family: inherit; cursor: pointer; border: none; background: none; 
   color: #e8f0ea; margin-bottom: 7px; padding-right: 18px;
 }
 
+.wt-popup-live {
+  display: inline-block; font-size: 10.5px; font-weight: 600;
+  color: #93c5fd; background: rgba(59,130,246,0.16); border: 1px solid #3b82f6;
+  padding: 3px 8px; border-radius: 6px; margin-bottom: 9px; letter-spacing: 0.2px;
+}
+
+/* Anillo de pulso de la estación en vivo (radar ping) */
+.wt-live-pulse {
+  transform-box: fill-box;
+  transform-origin: center;
+  animation: wtLivePulse 1.8s ease-out infinite;
+}
+@keyframes wtLivePulse {
+  0%   { transform: scale(0.85); opacity: 0.8; }
+  100% { transform: scale(1.9); opacity: 0; }
+}
+
 .wt-popup-sector {
   display: inline-block; font-size: 10.5px; font-weight: 500;
   padding: 2px 8px; border-radius: 5px; border: 1px solid;
@@ -263,6 +287,17 @@ button { font-family: inherit; cursor: pointer; border: none; background: none; 
 .stat { background: var(--surface-2); border-radius: 10px; padding: 12px 10px; text-align: center; }
 .stat .v { font-family: var(--font-display); font-size: 21px; font-weight: 600; color: var(--green); }
 .stat .k { font-size: 10.5px; color: var(--muted); margin-top: 4px; text-transform: uppercase; letter-spacing: 0.4px; }
+.stat-clickable {
+  width: 100%; cursor: pointer; transition: border-color 0.13s, box-shadow 0.13s, background 0.13s;
+  background: rgba(224,138,30,0.14);
+  border: 1px solid var(--amber);
+}
+.stat-clickable .v { color: var(--amber); }
+.stat-clickable:hover {
+  background: rgba(224,138,30,0.22);
+  border-color: var(--amber-soft);
+  box-shadow: 0 0 0 1px var(--amber), 0 4px 14px rgba(224,138,30,0.25);
+}
 
 .split { display: grid; grid-template-columns: 1fr 1fr; gap: 9px; margin: 14px 0; }
 .split .stat .v { color: var(--ink); font-size: 18px; }
@@ -510,6 +545,7 @@ button { font-family: inherit; cursor: pointer; border: none; background: none; 
   display: flex; align-items: center; justify-content: center;
   padding: 24px;
 }
+.modal-overlay-top { z-index: 950; }
 .modal {
   background: var(--surface); border: 1px solid var(--line); border-radius: 16px;
   width: 100%; max-width: 420px; box-shadow: 0 24px 60px rgba(0,0,0,0.5);
@@ -711,6 +747,48 @@ button { font-family: inherit; cursor: pointer; border: none; background: none; 
   padding: 48px 20px; line-height: 1.7;
 }
 
+/* ---------- Visitas de estación (modal) ---------- */
+.visit-list { display: flex; flex-direction: column; gap: 10px; }
+
+.visit-card {
+  background: var(--surface-2); border: 1px solid var(--line); border-radius: 10px;
+  padding: 12px 14px;
+}
+.visit-card-top {
+  display: flex; align-items: center; justify-content: space-between;
+  margin-bottom: 9px;
+}
+.visit-photo {
+  display: flex; align-items: center; gap: 5px;
+  font-size: 10.5px; color: var(--muted-2);
+  background: transparent; border: none; padding: 0; cursor: default;
+}
+.visit-photo[data-has="true"] {
+  color: var(--moss); cursor: pointer; text-decoration: underline;
+  text-decoration-color: rgba(149,213,178,0.4); text-underline-offset: 2px;
+  transition: color 0.12s;
+}
+.visit-photo[data-has="true"]:hover { color: var(--green); }
+.visit-photo:disabled { opacity: 0.7; }
+.visit-ts { font-size: 11px; color: var(--muted); flex-shrink: 0; }
+
+.visit-id-row {
+  display: flex; align-items: flex-start; justify-content: space-between; gap: 10px;
+  padding-bottom: 10px; margin-bottom: 10px; border-bottom: 1px dashed var(--line);
+}
+.visit-unid {
+  font-size: 12px; color: var(--amber-soft); font-style: italic;
+  padding-bottom: 10px; margin-bottom: 10px; border-bottom: 1px dashed var(--line);
+}
+
+.visit-metrics { display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; }
+.visit-metric { text-align: center; }
+.visit-metric-v {
+  font-family: var(--font-display); font-size: 15px; font-weight: 600; color: var(--ink);
+}
+.visit-metric-v[data-flag="true"] { color: var(--amber); }
+.visit-metric-k { font-size: 9.5px; color: var(--muted); margin-top: 3px; text-transform: uppercase; letter-spacing: 0.4px; }
+
 /* ---------- Login page ---------- */
 .login-page {
   position: fixed; inset: 0; z-index: 1000;
@@ -761,6 +839,14 @@ button { font-family: inherit; cursor: pointer; border: none; background: none; 
   padding: 20px; display: flex; flex-direction: column; gap: 14px;
 }
 .login-submit { width: 100%; margin-top: 4px; padding: 11px; font-size: 14px; }
+
+.form-check {
+  display: flex; align-items: center; gap: 8px;
+  font-size: 12.5px; color: var(--muted); cursor: pointer; user-select: none;
+}
+.form-check input[type="checkbox"] {
+  width: 15px; height: 15px; accent-color: var(--forest); cursor: pointer;
+}
 
 @media (max-width: 720px) {
   .login-page { flex-direction: column; gap: 28px; overflow-y: auto; align-items: flex-start; }

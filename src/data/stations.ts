@@ -11,33 +11,23 @@ export const SECTORS: Sector[] = [
   { sector_id: "SEC-04", name: "Sur",     color: "#14b8a6", description: "Envigado, Sabaneta, Itagüí, La Estrella, Caldas, San Antonio de Prado" },
 ];
 
+// Catálogo reducido a 8 estaciones (2 por sector) para las demos de clase.
+// EST-07 (Envigado) es la única marcada is_live: true — la que se explica
+// como "esta sí manda datos reales"; el resto se presenta como simulación.
+// Para cambiar cuál es la estación en vivo, mueve is_live: true a otra entrada.
 export const STATIONS: Station[] = [
   // --- Norte (SEC-01) ---
   { station_id: "EST-06", name: "Estación 06 — Bello (norte)", lat: 6.3372, lng: -75.5589, status: "online", sector_id: "SEC-01" },
   { station_id: "EST-12", name: "Estación 12 — Copacabana", lat: 6.3489, lng: -75.5089, status: "online", sector_id: "SEC-01" },
-  { station_id: "EST-13", name: "Estación 13 — Girardota", lat: 6.3792, lng: -75.4456, status: "online", sector_id: "SEC-01" },
-  { station_id: "EST-14", name: "Estación 14 — Barbosa", lat: 6.4392, lng: -75.3316, status: "alert", sector_id: "SEC-01" },
-  { station_id: "EST-21", name: "Estación 21 — Palmitas (corregimiento)", lat: 6.3392, lng: -75.6616, status: "online", sector_id: "SEC-01" },
   // --- Centro (SEC-02) ---
   { station_id: "EST-01", name: "Estación 01 — Cerro El Volador", lat: 6.2614, lng: -75.5736, status: "online", sector_id: "SEC-02" },
   { station_id: "EST-02", name: "Estación 02 — Cerro Nutibara", lat: 6.2447, lng: -75.5812, status: "online", sector_id: "SEC-02" },
-  { station_id: "EST-04", name: "Estación 04 — La Asomadera", lat: 6.2289, lng: -75.5614, status: "online", sector_id: "SEC-02" },
-  { station_id: "EST-17", name: "Estación 17 — Robledo", lat: 6.2789, lng: -75.5912, status: "online", sector_id: "SEC-02" },
-  { station_id: "EST-18", name: "Estación 18 — Belén Rincón", lat: 6.2189, lng: -75.6116, status: "online", sector_id: "SEC-02" },
-  { station_id: "EST-19", name: "Estación 19 — Manrique (laderas)", lat: 6.2716, lng: -75.5478, status: "online", sector_id: "SEC-02" },
-  { station_id: "EST-20", name: "Estación 20 — Popular (nororiental)", lat: 6.2992, lng: -75.5378, status: "online", sector_id: "SEC-02" },
-  { station_id: "EST-22", name: "Estación 22 — Altavista", lat: 6.2289, lng: -75.6316, status: "online", sector_id: "SEC-02" },
   // --- Oriente (SEC-03) ---
   { station_id: "EST-03", name: "Estación 03 — Parque Arví (sector)", lat: 6.2789, lng: -75.5012, status: "online", sector_id: "SEC-03" },
   { station_id: "EST-05", name: "Estación 05 — Cerro Pan de Azúcar", lat: 6.2502, lng: -75.5278, status: "online", sector_id: "SEC-03" },
-  { station_id: "EST-15", name: "Estación 15 — Santa Elena", lat: 6.2092, lng: -75.5012, status: "online", sector_id: "SEC-03" },
   // --- Sur (SEC-04) ---
-  { station_id: "EST-07", name: "Estación 07 — Envigado (sur)", lat: 6.1716, lng: -75.5912, status: "alert", sector_id: "SEC-04" },
+  { station_id: "EST-07", name: "Estación 07 — Envigado (sur)", lat: 6.1716, lng: -75.5912, status: "alert", sector_id: "SEC-04", is_live: true },
   { station_id: "EST-08", name: "Estación 08 — Sabaneta", lat: 6.1518, lng: -75.6166, status: "online", sector_id: "SEC-04" },
-  { station_id: "EST-09", name: "Estación 09 — Itagüí", lat: 6.1844, lng: -75.6116, status: "online", sector_id: "SEC-04" },
-  { station_id: "EST-10", name: "Estación 10 — La Estrella", lat: 6.1589, lng: -75.6436, status: "online", sector_id: "SEC-04" },
-  { station_id: "EST-11", name: "Estación 11 — Caldas", lat: 6.0918, lng: -75.6366, status: "offline", sector_id: "SEC-04" },
-  { station_id: "EST-16", name: "Estación 16 — San Antonio de Prado", lat: 6.1872, lng: -75.6616, status: "online", sector_id: "SEC-04" },
 ];
 
 export const INDIVIDUALS: Individual[] = [
@@ -86,13 +76,14 @@ export function getMockEvents(): WildEvent[] {
   STATIONS.forEach((st, idx) => {
     const rand = rng(idx * 7919 + 13);
     const base = st.status === "offline" ? 4 : st.status === "alert" ? 9 : 18;
-    const count = base + Math.floor(rand() * 14);
+    // La estación is_live simula reportes más frecuentes y recientes, para
+    // que se note en la demo cuál es "la que manda datos reales".
+    const count = (st.is_live ? base + 10 : base) + Math.floor(rand() * 14);
 
     for (let i = 0; i < count; i++) {
       const identified = rand() > 0.42;
-      const hoursAgo = Math.floor(rand() * 24 * 7);
-      const offsetH = st.station_id === "EST-14" ? hoursAgo + 36 : hoursAgo;
-      const ts = new Date(now - offsetH * 3600_000).toISOString();
+      const hoursAgo = st.is_live ? Math.floor(rand() * 3) : Math.floor(rand() * 24 * 7);
+      const ts = new Date(now - hoursAgo * 3600_000).toISOString();
 
       events.push({
         station_id: st.station_id,

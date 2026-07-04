@@ -9,13 +9,16 @@ interface Props {
 export default function LoginPage({ onAuth }: Props) {
   const [mode, setMode] = useState<"login" | "register">("login");
   const [name, setName] = useState("");
+  const [document, setDocument] = useState("");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [confirm, setConfirm] = useState("");
+  const [remember, setRemember] = useState(true);
   const [error, setError] = useState("");
+  const [loading, setLoading] = useState(false);
 
   function reset() {
-    setName(""); setEmail(""); setPassword(""); setConfirm(""); setError("");
+    setName(""); setDocument(""); setEmail(""); setPassword(""); setConfirm(""); setError("");
   }
 
   function switchMode(m: "login" | "register") {
@@ -23,20 +26,26 @@ export default function LoginPage({ onAuth }: Props) {
     reset();
   }
 
-  function handleSubmit(e: React.FormEvent) {
+  async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
     setError("");
+
+    if (mode === "register") {
+      if (!name.trim()) { setError("El nombre es obligatorio."); return; }
+      if (!document.trim()) { setError("El documento es obligatorio."); return; }
+      if (password !== confirm) { setError("Las contraseñas no coinciden."); return; }
+    }
+
+    setLoading(true);
     try {
-      if (mode === "register") {
-        if (!name.trim()) { setError("El nombre es obligatorio."); return; }
-        if (password.length < 6) { setError("La contraseña debe tener al menos 6 caracteres."); return; }
-        if (password !== confirm) { setError("Las contraseñas no coinciden."); return; }
-        onAuth(register(name.trim(), email.trim(), password));
-      } else {
-        onAuth(login(email.trim(), password));
-      }
+      const user = mode === "register"
+        ? await register(name.trim(), document.trim(), email.trim(), password, remember)
+        : await login(email.trim(), password, remember);
+      onAuth(user);
     } catch (err: unknown) {
       setError(err instanceof Error ? err.message : "Error desconocido.");
+    } finally {
+      setLoading(false);
     }
   }
 
@@ -91,6 +100,18 @@ export default function LoginPage({ onAuth }: Props) {
             </div>
           )}
 
+          {mode === "register" && (
+            <div className="form-field">
+              <label className="form-label">Documento *</label>
+              <input
+                className="form-input"
+                value={document}
+                onChange={(e) => setDocument(e.target.value)}
+                placeholder="Cédula o documento de identidad"
+              />
+            </div>
+          )}
+
           <div className="form-field">
             <label className="form-label">Correo electrónico *</label>
             <input
@@ -111,7 +132,7 @@ export default function LoginPage({ onAuth }: Props) {
               type="password"
               value={password}
               onChange={(e) => setPassword(e.target.value)}
-              placeholder={mode === "register" ? "Mínimo 6 caracteres" : "Tu contraseña"}
+              placeholder={mode === "register" ? "Mín. 8 caracteres, mayúscula, minúscula y número" : "Tu contraseña"}
               required
             />
           </div>
@@ -129,10 +150,19 @@ export default function LoginPage({ onAuth }: Props) {
             </div>
           )}
 
+          <label className="form-check">
+            <input
+              type="checkbox"
+              checked={remember}
+              onChange={(e) => setRemember(e.target.checked)}
+            />
+            <span>Recordarme en este dispositivo</span>
+          </label>
+
           {error && <p className="form-error">{error}</p>}
 
-          <button type="submit" className="btn-submit login-submit">
-            {mode === "login" ? "Entrar" : "Crear cuenta"}
+          <button type="submit" className="btn-submit login-submit" disabled={loading}>
+            {loading ? "Un momento…" : mode === "login" ? "Entrar" : "Crear cuenta"}
           </button>
         </form>
       </div>
