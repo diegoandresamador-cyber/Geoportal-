@@ -4,7 +4,7 @@ import { fetchSectors, fetchStations, fetchEvents, fetchIndividuals, computeStat
 import { restoreSession, logout, UnauthorizedError } from "./lib/auth";
 import type { User } from "./lib/auth";
 import Sidebar, { type FilterMode } from "./components/Sidebar";
-import MapView from "./components/MapView";
+import MapView, { type TraceInfo } from "./components/MapView";
 import DetailPanel from "./components/DetailPanel";
 import SectorModal from "./components/SectorModal";
 import StationModal from "./components/StationModal";
@@ -14,6 +14,7 @@ import AnimalFeedingDashboard from "./components/AnimalFeedingDashboard";
 import ExportModal from "./components/ExportModal";
 import StationVisitsModal from "./components/StationVisitsModal";
 import DeviceLinkModal from "./components/DeviceLinkModal";
+import StatsModal from "./components/StatsModal";
 import LoginPage from "./components/LoginPage";
 import { exportEventsCsv } from "./lib/exportData";
 
@@ -37,6 +38,8 @@ export default function App() {
   const [exportModalOpen, setExportModalOpen] = useState(false);
   const [deviceLinkStationId, setDeviceLinkStationId] = useState<string | null>(null);
   const [visitsModalOpen, setVisitsModalOpen] = useState(false);
+  const [statsModalOpen, setStatsModalOpen] = useState(false);
+  const [traceIndividualId, setTraceIndividualId] = useState<string | null>(null);
 
   useEffect(() => {
     if (!currentUser) return;
@@ -95,10 +98,24 @@ export default function App() {
     ? stations.find((s) => s.station_id === deviceLinkStationId) ?? null
     : null;
 
+  const traceData: TraceInfo | null = useMemo(() => {
+    if (!traceIndividualId) return null;
+    const individual = individuals.find((i) => i.individual_id === traceIndividualId);
+    if (!individual) return null;
+    const stationById = new Map(stations.map((s) => [s.station_id, s]));
+    const stops = events
+      .filter((e) => e.rfid_tag === individual.rfid_tag)
+      .sort((a, b) => a.timestamp.localeCompare(b.timestamp))
+      .map((e) => ({ station: stationById.get(e.station_id), timestamp: e.timestamp }))
+      .filter((s): s is { station: Station; timestamp: string } => !!s.station);
+    return stops.length > 0 ? { individual, stops } : null;
+  }, [traceIndividualId, individuals, stations, events]);
+
   useEffect(() => {
     const h = (e: KeyboardEvent) => {
       if (e.key === "Escape") {
         if (deviceLinkStationId) { setDeviceLinkStationId(null); return; }
+        if (statsModalOpen) { setStatsModalOpen(false); return; }
         if (visitsModalOpen) { setVisitsModalOpen(false); return; }
         if (exportModalOpen) { setExportModalOpen(false); return; }
         if (viewingHistory) { setViewingHistory(null); return; }
@@ -111,7 +128,7 @@ export default function App() {
     };
     window.addEventListener("keydown", h);
     return () => window.removeEventListener("keydown", h);
-  }, [deviceLinkStationId, visitsModalOpen, exportModalOpen, viewingHistory, viewingIndividual, sectorModalOpen, stationModalSectorId, individualModalStationId]);
+  }, [deviceLinkStationId, statsModalOpen, visitsModalOpen, exportModalOpen, viewingHistory, viewingIndividual, sectorModalOpen, stationModalSectorId, individualModalStationId]);
 
   // --- Creación / actualización de entidades ---
 
@@ -167,6 +184,7 @@ export default function App() {
         onAddSector={() => setSectorModalOpen(true)}
         onAddStation={(sectorId) => setStationModalSectorId(sectorId)}
         onOpenExport={() => setExportModalOpen(true)}
+        onOpenStats={() => setStatsModalOpen(true)}
         onLogout={handleLogout}
         currentUser={currentUser}
         isFiltered={isFiltered}
@@ -177,6 +195,8 @@ export default function App() {
         selectedId={selectedId}
         onSelect={onSelect}
         sectors={sectors}
+        trace={traceData}
+        onExitTrace={() => setTraceIndividualId(null)}
       />
       <DetailPanel
         station={selectedStation}
@@ -264,6 +284,25 @@ export default function App() {
           events={events}
           stations={stations}
           onClose={() => setViewingHistory(null)}
+          onViewOnMap={() => {
+            setTraceIndividualId(viewingHistory.individual_id);
+            setViewingHistory(null);
+          }}
+        />
+      )}
+
+      {statsModalOpen && (
+        <StatsModal
+          sectors={sectors}
+          stations={stations}
+          individuals={individuals}
+          events={events}
+          statsById={statsById}
+          onClose={() => setStatsModalOpen(false)}
+          onTraceIndividual={(individualId) => {
+            setTraceIndividualId(individualId);
+            setStatsModalOpen(false);
+          }}
         />
       )}
     </div>

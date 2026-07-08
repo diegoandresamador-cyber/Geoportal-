@@ -18,6 +18,7 @@ interface Props {
   onAddSector: () => void;
   onAddStation: (sectorId: string) => void;
   onOpenExport: () => void;
+  onOpenStats: () => void;
   onLogout: () => void;
   currentUser: User;
   isFiltered: boolean;
@@ -36,7 +37,7 @@ function ChevronIcon({ collapsed }: { collapsed: boolean }) {
 
 export default function Sidebar({
   sectors, stations, statsById, totals, query, setQuery, filter, setFilter,
-  selectedId, onSelect, onAddSector, onAddStation, onOpenExport, onLogout, currentUser, isFiltered,
+  selectedId, onSelect, onAddSector, onAddStation, onOpenExport, onOpenStats, onLogout, currentUser, isFiltered,
 }: Props) {
   // All sectors start expanded; toggling adds/removes the sector_id from this set
   const [collapsed, setCollapsed] = useState<Set<string>>(new Set());
@@ -194,6 +195,12 @@ export default function Sidebar({
         })}
       </div>
       <div className="sidebar-footer">
+        <button className="btn-export-global" onClick={onOpenStats}>
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor">
+            <path d="M4 20V10h3v10H4zm6.5 0V4h3v16h-3zM17 20v-7h3v7h-3z" />
+          </svg>
+          Estadísticas
+        </button>
         <button className="btn-export-global" onClick={onOpenExport}>
           <svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor">
             <path d="M12 16l-5-5h3V4h4v7h3l-5 5zm-6 2h12v2H6v-2z" />

@@ -1,6 +1,9 @@
 import { useEffect, useRef, useState } from "react";
 import L from "leaflet";
-import type { Sector, Station, StationStats } from "../types/wildtrack";
+import type { Sector, Station, StationStats, Individual } from "../types/wildtrack";
+
+export interface TraceStop { station: Station; timestamp: string; }
+export interface TraceInfo { individual: Individual; stops: TraceStop[]; }
 
 interface Props {
   stations: Station[];
@@ -8,6 +11,8 @@ interface Props {
   selectedId: string | null;
   onSelect: (id: string) => void;
   sectors: Sector[];
+  trace: TraceInfo | null;
+  onExitTrace: () => void;
 }
 
 const COLORS = { forest: "#2d6a4f", green: "#52b788", amber: "#e08a1e", muted: "#5f7669", live: "#3b82f6" };
@@ -109,11 +114,12 @@ function buildPopupHTML(
   `;
 }
 
-export default function MapView({ stations, statsById, selectedId, onSelect, sectors }: Props) {
+export default function MapView({ stations, statsById, selectedId, onSelect, sectors, trace, onExitTrace }: Props) {
   const mapRef = useRef<L.Map | null>(null);
   const containerRef = useRef<HTMLDivElement>(null);
   const markersRef = useRef<Map<string, L.Marker>>(new Map());
   const tileLayerRef = useRef<L.TileLayer | null>(null);
+  const traceLayerRef = useRef<L.LayerGroup | null>(null);
   // Stable ref so the delegated click listener always has the latest onSelect
   const onSelectRef = useRef(onSelect);
   const [activeLayer, setActiveLayer] = useState<LayerKey>("dark");
@@ -197,6 +203,37 @@ export default function MapView({ stations, statsById, selectedId, onSelect, sec
     if (st) map.panTo([st.lat, st.lng], { animate: true });
   }, [selectedId, stations]);
 
+  // Trazabilidad espacial: dibuja la ruta cronológica de un individuo entre estaciones
+  useEffect(() => {
+    const map = mapRef.current;
+    if (!map) return;
+
+    if (traceLayerRef.current) {
+      traceLayerRef.current.remove();
+      traceLayerRef.current = null;
+    }
+    if (!trace || trace.stops.length === 0) return;
+
+    const layer = L.layerGroup();
+    const latlngs = trace.stops.map((s) => [s.station.lat, s.station.lng] as [number, number]);
+
+    L.polyline(latlngs, { color: COLORS.amber, weight: 3, dashArray: "6 6", opacity: 0.9 }).addTo(layer);
+
+    trace.stops.forEach((s, i) => {
+      const icon = L.divIcon({
+        html: `<div class="trace-stop-marker">${i + 1}</div>`,
+        className: "trace-stop-wrap",
+        iconSize: [22, 22],
+        iconAnchor: [11, 11],
+      });
+      L.marker([s.station.lat, s.station.lng], { icon, zIndexOffset: 1000 }).addTo(layer);
+    });
+
+    layer.addTo(map);
+    traceLayerRef.current = layer;
+    map.fitBounds(L.latLngBounds(latlngs), { padding: [70, 70], maxZoom: 14 });
+  }, [trace]);
+
   return (
     <div className="map-wrap">
       <div ref={containerRef} style={{ width: "100%", height: "100%" }} />
@@ -216,7 +253,15 @@ export default function MapView({ stations, statsById, selectedId, onSelect, sec
         ))}
       </div>
 
-      <div className="banner"><span className="dot" /> Datos de ejemplo — reemplazar por mediciones reales de campo</div>
+      {trace ? (
+        <div className="banner trace-banner">
+          <span className="dot" />
+          Trazabilidad: <strong>{trace.individual.common_name}</strong> ({trace.individual.individual_id}) · {trace.stops.length} paradas
+          <button className="btn-trace-exit" onClick={onExitTrace}>Salir</button>
+        </div>
+      ) : (
+        <div className="banner"><span className="dot" /> Datos de ejemplo — reemplazar por mediciones reales de campo</div>
+      )}
       <div className="legend">
         <h4>Cómo leer el mapa</h4>
         <div className="row"><span className="swatch" style={{ background: COLORS.forest }} /> Tamaño = nº de visitas</div>

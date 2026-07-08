@@ -7,6 +7,7 @@ interface Props {
   events: WildEvent[];
   stations: Station[];
   onClose: () => void;
+  onViewOnMap: () => void;
 }
 
 const DAYS = ["Lun", "Mar", "Mié", "Jue", "Vie", "Sáb", "Dom"];
@@ -15,7 +16,7 @@ function stationShortName(full: string): string {
   return full.replace(/^Estación \d+ — /, "");
 }
 
-export default function AnimalFeedingDashboard({ individual, events, stations, onClose }: Props) {
+export default function AnimalFeedingDashboard({ individual, events, stations, onClose, onViewOnMap }: Props) {
   const myEvents = events
     .filter((e) => e.rfid_tag === individual.rfid_tag)
     .sort((a, b) => b.timestamp.localeCompare(a.timestamp));
@@ -79,6 +80,15 @@ export default function AnimalFeedingDashboard({ individual, events, stations, o
             <div className="sib-header-sci">{individual.species}</div>
           </div>
           <div style={{ display: "flex", alignItems: "center", gap: 8, flexShrink: 0 }}>
+            {sortedStations.length > 1 && (
+              <button
+                className="btn-trace"
+                title="Ver el recorrido de este individuo entre estaciones"
+                onClick={onViewOnMap}
+              >
+                Ver ruta en el mapa →
+              </button>
+            )}
             {myEvents.length > 0 && (
               <button
                 className="btn-download-inline"

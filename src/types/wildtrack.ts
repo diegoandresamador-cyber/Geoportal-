@@ -87,6 +87,25 @@ export interface StationStats {
   visitasPorDia: number[];
 }
 
+/** Estadística agregada por sector (suma de las estaciones que lo componen). */
+export interface SectorStats {
+  sector_id: string;
+  estaciones: number;
+  visitas: number;
+  identificados: number;
+  noIdentificados: number;
+  pesoPromedio: number;
+  alertas: number;
+}
+
+/** Secuencia cronológica de estaciones visitadas por un individuo con chip. */
+export interface IndividualMovement {
+  individual_id: string;
+  rfid_tag: string;
+  path: { station_id: string; timestamp: string }[];
+  distinctStations: number;
+}
+
 /** Rangos válidos del contrato de datos, para validar lecturas en la UI. */
 export const CONTRATO = {
   weight_g: { min: 0, max: 500, umbralDispensa: 50, unidad: "g" },
